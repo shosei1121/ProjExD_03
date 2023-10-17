@@ -4,6 +4,8 @@ import time
 import math
 import pygame as pg
 
+import threading
+
 
 WIDTH = 1600  # ゲームウィンドウの幅
 HEIGHT = 900  # ゲームウィンドウの高さ
@@ -173,7 +175,30 @@ class Explosion(pg.sprite.Sprite):
         """
         self.life -= 1
         self.image = self.imgs[self.life//10%2]
-        
+       
+       
+class Score:
+    """
+    打ち落とした爆弾をスコアとして表示するクラス
+    """
+    def __init__(self):
+        """
+        スコアの初期化と表示設定
+        """
+        self.font = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
+        self.color = (0, 0, 255)
+        self.score = 0
+        self.img = self.font.render("表示させる文字列", 0, self.color)
+        self.rect = self.img.get_rect()
+        self.rect.center = 100, HEIGHT-50
+
+    def update(self, screen: pg.Surface):
+        """
+        現在のスコアを表示する文字列Surfaceを更新
+        """
+        self.img = self.font.render(f"  スコア: {self.score}", 0, self.color)
+        screen.blit(self.img, self.rect)
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
@@ -182,15 +207,19 @@ def main():
     bird = Bird(3, (900, 400))
     bombs = [Bomb() for _ in range(NUM_OF_BOMBS)]
     beam = None
+    beams = []
     explosions = []  # 爆発エフェクトを追跡するリスト
     clock = pg.time.Clock()
     tmr = 0
+    score = Score()
+    
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beam = Beam(bird)
+                beams.append(Beam(bird))  # 新しいビームをリストに追加
+                
         tmr += 1
         screen.blit(bg_img, [0, 0])
         
@@ -206,32 +235,60 @@ def main():
                 # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
                 bird.change_img(8, screen)
                 pg.display.update()
+                
+                sound()
+                font = pg.font.SysFont("comicsansms", 36)
+                text = font.render("Hello, Pygame!", True, (255, 255, 255))
+                screen.blit(text, (800, 450))
+
+                
                 time.sleep(1)
                 return
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
         
-        if beam is not None:  # ビームが存在している時
-            beam.update(screen)
-            for i, bomb in enumerate(bombs):
-                if beam.rct.colliderect(bomb.rct):
-                    beam = None
-                    del bombs[i]
-                    bird.change_img(6, screen)
-                    explosions.append(Explosion(bomb, 50))  # スプライトグループに追加
-                    break
+        if beams:
+        # ビームを更新し、リストから削除する
+            for beam in beams:
+                beam.update(screen)
+                if not (0 <= beam.rct.centerx <= WIDTH and 0 <= beam.rct.centery <= HEIGHT):
+                    beams.remove(beam)
+
+        # 爆弾との衝突をチェックし、ビームと爆弾が衝突した場合、ビームと爆弾をリストから削除
+            for beam in beams:
+                for i, bomb in enumerate(bombs):
+                    if beam.rct.colliderect(bomb.rct):
+                        beams.remove(beam)
+                        del bombs[i]
+                        bird.change_img(6, screen)
+                        explosions.append(Explosion(bomb, 50))  # スプライトグループに追加
+                        score.score += 1
+                        break
           
         # 爆発エフェクトを画面に描画      
         for explosion in explosions:
             screen.blit(explosion.image, explosion.rect)
-            
+        
+        score.update(screen)   
         pg.display.update()
         clock.tick(50)
 
+
+def sound():
+    pg.mixer.init() #初期化
+
+    pg.mixer.music.load("ex03/gameover4.mp3") #読み込み
+
+    pg.mixer.music.play(1) #再生
+
+    time.sleep(3)
+
+    pg.mixer.music.stop() #終了
 
 if __name__ == "__main__":
     pg.init()
     main()
     pg.quit()
     sys.exit()
+    
