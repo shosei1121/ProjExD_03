@@ -205,6 +205,7 @@ def main():
     bird = Bird(3, (900, 400))
     bombs = [Bomb() for _ in range(NUM_OF_BOMBS)]
     beam = None
+    beams = []
     explosions = []  # 爆発エフェクトを追跡するリスト
     clock = pg.time.Clock()
     tmr = 0
@@ -215,7 +216,8 @@ def main():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beam = Beam(bird)
+                beams.append(Beam(bird))  # 新しいビームをリストに追加
+                
         tmr += 1
         screen.blit(bg_img, [0, 0])
         
@@ -237,16 +239,23 @@ def main():
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
         
-        if beam is not None:  # ビームが存在している時
-            beam.update(screen)
-            for i, bomb in enumerate(bombs):
-                if beam.rct.colliderect(bomb.rct):
-                    beam = None
-                    del bombs[i]
-                    bird.change_img(6, screen)
-                    explosions.append(Explosion(bomb, 50))  # スプライトグループに追加
-                    score.score += 1
-                    break
+        if beams:
+        # ビームを更新し、リストから削除する
+            for beam in beams:
+                beam.update(screen)
+                if not (0 <= beam.rct.centerx <= WIDTH and 0 <= beam.rct.centery <= HEIGHT):
+                    beams.remove(beam)
+
+        # 爆弾との衝突をチェックし、ビームと爆弾が衝突した場合、ビームと爆弾をリストから削除
+            for beam in beams:
+                for i, bomb in enumerate(bombs):
+                    if beam.rct.colliderect(bomb.rct):
+                        beams.remove(beam)
+                        del bombs[i]
+                        bird.change_img(6, screen)
+                        explosions.append(Explosion(bomb, 50))  # スプライトグループに追加
+                        score.score += 1
+                        break
           
         # 爆発エフェクトを画面に描画      
         for explosion in explosions:
