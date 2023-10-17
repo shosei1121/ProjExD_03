@@ -173,7 +173,30 @@ class Explosion(pg.sprite.Sprite):
         """
         self.life -= 1
         self.image = self.imgs[self.life//10%2]
-        
+       
+       
+class Score:
+    """
+    打ち落とした爆弾をスコアとして表示するクラス
+    """
+    def __init__(self):
+        """
+        スコアの初期化と表示設定
+        """
+        self.font = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
+        self.color = (0, 0, 255)
+        self.score = 0
+        self.img = self.font.render("表示させる文字列", 0, self.color)
+        self.rect = self.img.get_rect()
+        self.rect.center = 100, HEIGHT-50
+
+    def update(self, screen: pg.Surface):
+        """
+        現在のスコアを表示する文字列Surfaceを更新
+        """
+        self.img = self.font.render(f"  スコア: {self.score}", 0, self.color)
+        screen.blit(self.img, self.rect)
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
@@ -185,6 +208,8 @@ def main():
     explosions = []  # 爆発エフェクトを追跡するリスト
     clock = pg.time.Clock()
     tmr = 0
+    score = Score()
+    
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -220,12 +245,14 @@ def main():
                     del bombs[i]
                     bird.change_img(6, screen)
                     explosions.append(Explosion(bomb, 50))  # スプライトグループに追加
+                    score.score += 1
                     break
           
         # 爆発エフェクトを画面に描画      
         for explosion in explosions:
             screen.blit(explosion.image, explosion.rect)
-            
+        
+        score.update(screen)   
         pg.display.update()
         clock.tick(50)
 
